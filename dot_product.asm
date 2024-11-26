@@ -1,52 +1,28 @@
-section .data
-    ; No static data needed
-
 section .text
     global dot_product_asm
 
-; Function signature: float dot_product_asm(const float *A, const float *B, int n)
 dot_product_asm:
-    ; Prologue
-    push rbp
-    mov rbp, rsp
-    sub rsp, 16            ; Allocate space for local variables (sum)
+    ; Function signature: double dot_product_asm(const double *A, const double *B, int n)
+    ; Input:
+    ;   A - rcx (pointer to array A)
+    ;   B - rdx (pointer to array B)
+    ;   n - r8d (number of elements)
+    ; Output:
+    ;   xmm0 - dot product result (double-precision)
 
-    ; Initialize local variable for sum
-    xorps xmm0, xmm0       ; xmm0 = 0.0 (accumulator for sum)
-
-    ; Load arguments
-    mov rdi, [rbp + 16]    ; A pointer
-    mov rsi, [rbp + 24]    ; B pointer
-    mov ecx, [rbp + 32]    ; n (vector length)
+    ; Initialize registers
+    xorpd xmm0, xmm0        ; xmm0 = 0.0 (accumulator)
+    test r8d, r8d           ; Check if n == 0
+    jz .done                ; If n == 0, return 0.0
 
 .loop:
-    test ecx, ecx          ; Check if n == 0
-    jz .done               ; If n == 0, exit loop
-
-    ; Load A[i] and B[i] into xmm1 and xmm2
-    movss xmm1, [rdi]      ; Load A[i]
-    movss xmm2, [rsi]      ; Load B[i]
-
-    ; Perform multiplication
-    mulss xmm1, xmm2       ; xmm1 = A[i] * B[i]
-
-    ; Add result to accumulator
-    addss xmm0, xmm1       ; xmm0 += A[i] * B[i]
-
-    ; Increment pointers
-    add rdi, 4             ; Move to next float in A
-    add rsi, 4             ; Move to next float in B
-
-    ; Decrement counter
-    dec ecx
-    jmp .loop
+    movsd xmm1, [rcx]       ; Load *A into xmm1
+    mulsd xmm1, [rdx]       ; xmm1 *= *B
+    addsd xmm0, xmm1        ; xmm0 += xmm1
+    add rcx, 8              ; Increment A pointer (double size = 8 bytes)
+    add rdx, 8              ; Increment B pointer
+    dec r8d                 ; Decrement n
+    jnz .loop               ; Repeat loop if n != 0
 
 .done:
-    ; Store result in memory (sum)
-    movss [rsp], xmm0      ; Store sum in local variable
-
-    ; Epilogue
-    movss xmm0, [rsp]      ; Return result in xmm0
-    add rsp, 16
-    pop rbp
     ret

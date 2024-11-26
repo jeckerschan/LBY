@@ -2,44 +2,56 @@
 #include <stdlib.h>
 #include <time.h>
 
-// Function prototypes for the C and assembly kernels
-float dot_product_c(const float *A, const float *B, int n);
-extern float dot_product_asm(const float *A, const float *B, int n);
+// Declare the Assembly function
+extern double dot_product_asm(const double *A, const double *B, int n);
 
-#define VECTOR_SIZE 1024
+// C implementation of the dot product
+double dot_product_c(const double *A, const double *B, int n) {
+    double sum = 0.0;
+    for (int i = 0; i < n; i++) {
+        sum += A[i] * B[i];
+    }
+    return sum;
+}
 
 int main() {
-    float *A = (float *)malloc(VECTOR_SIZE * sizeof(float));
-    float *B = (float *)malloc(VECTOR_SIZE * sizeof(float));
-    if (!A || !B) {
+    // Define the size of the arrays
+    const int ARRAY_SIZE = 1000000; // 1 million elements
+
+    // Dynamically allocate memory for arrays
+    double *A = malloc(ARRAY_SIZE * sizeof(double));
+    double *B = malloc(ARRAY_SIZE * sizeof(double));
+    if (A == NULL || B == NULL) {
         printf("Memory allocation failed\n");
         return 1;
     }
 
-    // Initialize the vectors with random float values
-    srand((unsigned)time(NULL));
-    for (int i = 0; i < VECTOR_SIZE; i++) {
-        A[i] = (float)(rand() % 100) / 10.0f; // Random float between 0.0 and 9.9
-        B[i] = (float)(rand() % 100) / 10.0f; // Random float between 0.0 and 9.9
+    // Initialize arrays with smaller values to prevent overflow
+    for (int i = 0; i < ARRAY_SIZE; i++) {
+        A[i] = 1.0; // Example: All elements set to 1.0
+        B[i] = 1.0;
     }
 
-    // Compute dot product using C kernel
-    clock_t start_c = clock();
-    float result_c = dot_product_c(A, B, VECTOR_SIZE);
-    clock_t end_c = clock();
-    double time_c = (double)(end_c - start_c) / CLOCKS_PER_SEC;
+    // Timing variables
+    clock_t start, end;
+    double time_c, time_asm;
 
-    // Compute dot product using assembly kernel
-    clock_t start_asm = clock();
-    float result_asm = dot_product_asm(A, B, VECTOR_SIZE);
-    clock_t end_asm = clock();
-    double time_asm = (double)(end_asm - start_asm) / CLOCKS_PER_SEC;
+    // Dot product using C implementation
+    start = clock();
+    double s_dot_c = dot_product_c(A, B, ARRAY_SIZE);
+    end = clock();
+    time_c = ((double)(end - start)) / CLOCKS_PER_SEC;
 
-    // Output results
-    printf("Dot Product (C Kernel): %.6f\n", result_c);
+    // Dot product using Assembly implementation
+    start = clock();
+    double s_dot_asm = dot_product_asm(A, B, ARRAY_SIZE);
+    end = clock();
+    time_asm = ((double)(end - start)) / CLOCKS_PER_SEC;
+
+    // Display results
+    printf("Dot Product (C Kernel): %.6f\n", s_dot_c);
     printf("Execution Time (C Kernel): %.6f seconds\n", time_c);
-
-    printf("Dot Product (Assembly Kernel): %.6f\n", result_asm);
+    printf("Dot Product (Assembly Kernel): %.6f\n", s_dot_asm);
     printf("Execution Time (Assembly Kernel): %.6f seconds\n", time_asm);
 
     // Free allocated memory
@@ -47,13 +59,4 @@ int main() {
     free(B);
 
     return 0;
-}
-
-// C Kernel for dot product
-float dot_product_c(const float *A, const float *B, int n) {
-    float sum = 0.0f;
-    for (int i = 0; i < n; i++) {
-        sum += A[i] * B[i];
-    }
-    return sum;
 }
